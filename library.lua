@@ -1,19 +1,19 @@
-local Library = {}
-Library.__index = Library
+local ZayHub = {}
+ZayHub.__index = ZayHub
 
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
--- UI Library Configuration
+-- Configuration
 local Config = {
-	MainColor = Color3.fromRGB(25, 25, 35),
-	SecondaryColor = Color3.fromRGB(35, 35, 45),
-	AccentColor = Color3.fromRGB(100, 120, 255),
+	MainColor = Color3.fromRGB(20, 20, 20),
+	SecondaryColor = Color3.fromRGB(30, 30, 30),
+	AccentColor = Color3.fromRGB(60, 60, 60),
+	HoverColor = Color3.fromRGB(45, 45, 45),
 	TextColor = Color3.fromRGB(255, 255, 255),
-	BorderColor = Color3.fromRGB(50, 50, 60),
-	Font = Enum.Font.Gotham,
-	TweenSpeed = 0.2
+	BorderColor = Color3.fromRGB(50, 50, 50),
+	Font = Enum.Font.GothamBold,
+	TweenSpeed = 0.15
 }
 
 -- Utility Functions
@@ -34,13 +34,17 @@ local function create(class, props)
 	return obj
 end
 
--- Create Main Window
-function Library:CreateWindow(title)
-	local window = {}
+-- Initialize the Hub
+function ZayHub:Init(hubName)
+	local hub = {
+		hubName = hubName or "ZayHub",
+		tabs = {},
+		currentTab = nil
+	}
 	
 	-- ScreenGui
 	local screenGui = create("ScreenGui", {
-		Name = "UILibrary",
+		Name = "ZayHub",
 		ResetOnSpawn = false,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = game.CoreGui
@@ -49,8 +53,8 @@ function Library:CreateWindow(title)
 	-- Main Frame
 	local mainFrame = create("Frame", {
 		Name = "MainFrame",
-		Size = UDim2.new(0, 550, 0, 400),
-		Position = UDim2.new(0.5, -275, 0.5, -200),
+		Size = UDim2.new(0, 500, 0, 350),
+		Position = UDim2.new(0.5, -250, 0.5, -175),
 		BackgroundColor3 = Config.MainColor,
 		BorderSizePixel = 0,
 		Parent = screenGui
@@ -61,25 +65,10 @@ function Library:CreateWindow(title)
 		Parent = mainFrame
 	})
 	
-	-- Drop shadow
-	create("ImageLabel", {
-		Name = "Shadow",
-		Size = UDim2.new(1, 30, 1, 30),
-		Position = UDim2.new(0, -15, 0, -15),
-		BackgroundTransparency = 1,
-		Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
-		ImageColor3 = Color3.fromRGB(0, 0, 0),
-		ImageTransparency = 0.5,
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(10, 10, 118, 118),
-		ZIndex = 0,
-		Parent = mainFrame
-	})
-	
 	-- Title Bar
 	local titleBar = create("Frame", {
 		Name = "TitleBar",
-		Size = UDim2.new(1, 0, 0, 40),
+		Size = UDim2.new(1, 0, 0, 35),
 		BackgroundColor3 = Config.SecondaryColor,
 		BorderSizePixel = 0,
 		Parent = mainFrame
@@ -90,26 +79,54 @@ function Library:CreateWindow(title)
 		Parent = titleBar
 	})
 	
+	-- Fix bottom corners
+	create("Frame", {
+		Size = UDim2.new(1, 0, 0, 8),
+		Position = UDim2.new(0, 0, 1, -8),
+		BackgroundColor3 = Config.SecondaryColor,
+		BorderSizePixel = 0,
+		Parent = titleBar
+	})
+	
 	-- Title Text
 	create("TextLabel", {
 		Name = "Title",
-		Size = UDim2.new(1, -50, 1, 0),
+		Size = UDim2.new(1, -80, 1, 0),
 		Position = UDim2.new(0, 15, 0, 0),
 		BackgroundTransparency = 1,
-		Text = title,
+		Text = hub.hubName,
 		TextColor3 = Config.TextColor,
-		TextSize = 16,
+		TextSize = 15,
 		Font = Config.Font,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = titleBar
 	})
 	
+	-- Minimize Button
+	local minimizeBtn = create("TextButton", {
+		Name = "MinimizeButton",
+		Size = UDim2.new(0, 25, 0, 25),
+		Position = UDim2.new(1, -60, 0, 5),
+		BackgroundColor3 = Config.AccentColor,
+		BorderSizePixel = 0,
+		Text = "−",
+		TextColor3 = Config.TextColor,
+		TextSize = 18,
+		Font = Config.Font,
+		Parent = titleBar
+	})
+	
+	create("UICorner", {
+		CornerRadius = UDim.new(0, 4),
+		Parent = minimizeBtn
+	})
+	
 	-- Close Button
 	local closeBtn = create("TextButton", {
 		Name = "CloseButton",
-		Size = UDim2.new(0, 30, 0, 30),
-		Position = UDim2.new(1, -35, 0, 5),
-		BackgroundColor3 = Config.SecondaryColor,
+		Size = UDim2.new(0, 25, 0, 25),
+		Position = UDim2.new(1, -30, 0, 5),
+		BackgroundColor3 = Config.AccentColor,
 		BorderSizePixel = 0,
 		Text = "×",
 		TextColor3 = Config.TextColor,
@@ -119,22 +136,34 @@ function Library:CreateWindow(title)
 	})
 	
 	create("UICorner", {
-		CornerRadius = UDim.new(0, 6),
+		CornerRadius = UDim.new(0, 4),
 		Parent = closeBtn
 	})
 	
 	closeBtn.MouseButton1Click:Connect(function()
-		tween(mainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3)
-		wait(0.3)
 		screenGui:Destroy()
 	end)
 	
-	-- Tab Container
-	local tabContainer = create("Frame", {
+	local minimized = false
+	minimizeBtn.MouseButton1Click:Connect(function()
+		minimized = not minimized
+		if minimized then
+			tween(mainFrame, {Size = UDim2.new(0, 500, 0, 35)}, 0.2)
+		else
+			tween(mainFrame, {Size = UDim2.new(0, 500, 0, 350)}, 0.2)
+		end
+	end)
+	
+	-- Tab Container (Left Side)
+	local tabContainer = create("ScrollingFrame", {
 		Name = "TabContainer",
-		Size = UDim2.new(0, 120, 1, -50),
-		Position = UDim2.new(0, 10, 0, 45),
+		Size = UDim2.new(0, 180, 1, -45),
+		Position = UDim2.new(0, 10, 0, 40),
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 0,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Parent = mainFrame
 	})
 	
@@ -144,11 +173,11 @@ function Library:CreateWindow(title)
 		Parent = tabContainer
 	})
 	
-	-- Content Container
+	-- Content Container (Right Side)
 	local contentContainer = create("Frame", {
 		Name = "ContentContainer",
-		Size = UDim2.new(1, -140, 1, -50),
-		Position = UDim2.new(0, 130, 0, 45),
+		Size = UDim2.new(1, -200, 1, -45),
+		Position = UDim2.new(0, 195, 0, 40),
 		BackgroundColor3 = Config.SecondaryColor,
 		BorderSizePixel = 0,
 		Parent = mainFrame
@@ -194,29 +223,25 @@ function Library:CreateWindow(title)
 		end
 	end)
 	
-	window.screenGui = screenGui
-	window.mainFrame = mainFrame
-	window.tabContainer = tabContainer
-	window.contentContainer = contentContainer
-	window.tabs = {}
-	window.currentTab = nil
+	hub.screenGui = screenGui
+	hub.mainFrame = mainFrame
+	hub.tabContainer = tabContainer
+	hub.contentContainer = contentContainer
 	
-	return setmetatable(window, {__index = Library})
+	return setmetatable(hub, {__index = ZayHub})
 end
 
 -- Create Tab
-function Library:CreateTab(name)
+function ZayHub:CreateTab(name)
 	local tab = {}
 	
 	local tabBtn = create("TextButton", {
 		Name = name,
-		Size = UDim2.new(1, 0, 0, 35),
-		BackgroundColor3 = Config.SecondaryColor,
+		Size = UDim2.new(1, 0, 0, 40),
+		BackgroundColor3 = Config.AccentColor,
 		BorderSizePixel = 0,
-		Text = name,
-		TextColor3 = Config.TextColor,
-		TextSize = 14,
-		Font = Config.Font,
+		AutoButtonColor = false,
+		Text = "",
 		Parent = self.tabContainer
 	})
 	
@@ -225,31 +250,102 @@ function Library:CreateTab(name)
 		Parent = tabBtn
 	})
 	
+	-- Tab Icon
+	local icon = create("Frame", {
+		Size = UDim2.new(0, 30, 0, 30),
+		Position = UDim2.new(0, 8, 0.5, -15),
+		BackgroundColor3 = Config.MainColor,
+		BorderSizePixel = 0,
+		Parent = tabBtn
+	})
+	
+	create("UICorner", {
+		CornerRadius = UDim.new(0, 6),
+		Parent = icon
+	})
+	
+	-- Icon Circle (decorative)
+	create("Frame", {
+		Size = UDim2.new(0, 15, 0, 15),
+		Position = UDim2.new(0.5, -7.5, 0.5, -7.5),
+		BackgroundColor3 = Config.AccentColor,
+		BorderSizePixel = 0,
+		Parent = icon
+	})
+	
+	-- Tab Text
+	local tabText = create("TextLabel", {
+		Size = UDim2.new(1, -50, 1, 0),
+		Position = UDim2.new(0, 45, 0, 0),
+		BackgroundTransparency = 1,
+		Text = name,
+		TextColor3 = Config.TextColor,
+		TextSize = 14,
+		Font = Config.Font,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = tabBtn
+	})
+	
+	-- Info Icon (circle with i)
+	local infoBtn = create("TextButton", {
+		Size = UDim2.new(0, 20, 0, 20),
+		Position = UDim2.new(1, -25, 0.5, -10),
+		BackgroundColor3 = Config.MainColor,
+		BorderSizePixel = 0,
+		Text = "i",
+		TextColor3 = Config.TextColor,
+		TextSize = 12,
+		Font = Config.Font,
+		Parent = tabBtn
+	})
+	
+	create("UICorner", {
+		CornerRadius = UDim.new(1, 0),
+		Parent = infoBtn
+	})
+	
+	-- Tab Content
 	local tabContent = create("ScrollingFrame", {
 		Name = name.."Content",
-		Size = UDim2.new(1, -20, 1, -20),
-		Position = UDim2.new(0, 10, 0, 10),
+		Size = UDim2.new(1, -15, 1, -15),
+		Position = UDim2.new(0, 7, 0, 7),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 4,
 		ScrollBarImageColor3 = Config.AccentColor,
 		Visible = false,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Parent = self.contentContainer
 	})
 	
 	create("UIListLayout", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 8),
+		Padding = UDim.new(0, 6),
 		Parent = tabContent
 	})
 	
+	-- Hover effects
+	tabBtn.MouseEnter:Connect(function()
+		if tab ~= self.currentTab then
+			tween(tabBtn, {BackgroundColor3 = Config.HoverColor})
+		end
+	end)
+	
+	tabBtn.MouseLeave:Connect(function()
+		if tab ~= self.currentTab then
+			tween(tabBtn, {BackgroundColor3 = Config.AccentColor})
+		end
+	end)
+	
+	-- Tab switching
 	tabBtn.MouseButton1Click:Connect(function()
 		for _, t in pairs(self.tabs) do
-			t.button.BackgroundColor3 = Config.SecondaryColor
+			tween(t.button, {BackgroundColor3 = Config.AccentColor})
 			t.content.Visible = false
 		end
 		
-		tabBtn.BackgroundColor3 = Config.AccentColor
+		tween(tabBtn, {BackgroundColor3 = Config.HoverColor})
 		tabContent.Visible = true
 		self.currentTab = tab
 	end)
@@ -260,25 +356,26 @@ function Library:CreateTab(name)
 	
 	table.insert(self.tabs, tab)
 	
+	-- Auto-select first tab
 	if #self.tabs == 1 then
-		tabBtn.BackgroundColor3 = Config.AccentColor
+		tabBtn.BackgroundColor3 = Config.HoverColor
 		tabContent.Visible = true
 		self.currentTab = tab
 	end
 	
-	return setmetatable(tab, {__index = Library})
+	return setmetatable(tab, {__index = ZayHub})
 end
 
 -- Create Button
-function Library:CreateButton(name, callback)
+function ZayHub:CreateButton(name, callback)
 	local btn = create("TextButton", {
 		Name = name,
 		Size = UDim2.new(1, 0, 0, 35),
-		BackgroundColor3 = Config.SecondaryColor,
+		BackgroundColor3 = Config.AccentColor,
 		BorderSizePixel = 0,
 		Text = name,
 		TextColor3 = Config.TextColor,
-		TextSize = 14,
+		TextSize = 13,
 		Font = Config.Font,
 		Parent = self.content
 	})
@@ -288,24 +385,18 @@ function Library:CreateButton(name, callback)
 		Parent = btn
 	})
 	
-	create("UIStroke", {
-		Color = Config.BorderColor,
-		Thickness = 1,
-		Parent = btn
-	})
-	
 	btn.MouseEnter:Connect(function()
-		tween(btn, {BackgroundColor3 = Config.AccentColor})
+		tween(btn, {BackgroundColor3 = Config.HoverColor})
 	end)
 	
 	btn.MouseLeave:Connect(function()
-		tween(btn, {BackgroundColor3 = Config.SecondaryColor})
+		tween(btn, {BackgroundColor3 = Config.AccentColor})
 	end)
 	
 	btn.MouseButton1Click:Connect(function()
-		tween(btn, {Size = UDim2.new(1, 0, 0, 32)}, 0.1)
+		tween(btn, {BackgroundColor3 = Config.MainColor}, 0.1)
 		wait(0.1)
-		tween(btn, {Size = UDim2.new(1, 0, 0, 35)}, 0.1)
+		tween(btn, {BackgroundColor3 = Config.AccentColor}, 0.1)
 		callback()
 	end)
 	
@@ -313,25 +404,19 @@ function Library:CreateButton(name, callback)
 end
 
 -- Create Toggle
-function Library:CreateToggle(name, default, callback)
+function ZayHub:CreateToggle(name, default, callback)
 	local toggled = default or false
 	
 	local toggleFrame = create("Frame", {
 		Name = name,
 		Size = UDim2.new(1, 0, 0, 35),
-		BackgroundColor3 = Config.SecondaryColor,
+		BackgroundColor3 = Config.AccentColor,
 		BorderSizePixel = 0,
 		Parent = self.content
 	})
 	
 	create("UICorner", {
 		CornerRadius = UDim.new(0, 6),
-		Parent = toggleFrame
-	})
-	
-	create("UIStroke", {
-		Color = Config.BorderColor,
-		Thickness = 1,
 		Parent = toggleFrame
 	})
 	
@@ -341,7 +426,7 @@ function Library:CreateToggle(name, default, callback)
 		BackgroundTransparency = 1,
 		Text = name,
 		TextColor3 = Config.TextColor,
-		TextSize = 14,
+		TextSize = 13,
 		Font = Config.Font,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = toggleFrame
@@ -350,7 +435,7 @@ function Library:CreateToggle(name, default, callback)
 	local toggleBtn = create("TextButton", {
 		Size = UDim2.new(0, 40, 0, 20),
 		Position = UDim2.new(1, -45, 0.5, -10),
-		BackgroundColor3 = toggled and Config.AccentColor or Config.BorderColor,
+		BackgroundColor3 = toggled and Color3.fromRGB(100, 200, 100) or Config.MainColor,
 		BorderSizePixel = 0,
 		Text = "",
 		Parent = toggleFrame
@@ -377,7 +462,7 @@ function Library:CreateToggle(name, default, callback)
 	toggleBtn.MouseButton1Click:Connect(function()
 		toggled = not toggled
 		
-		tween(toggleBtn, {BackgroundColor3 = toggled and Config.AccentColor or Config.BorderColor})
+		tween(toggleBtn, {BackgroundColor3 = toggled and Color3.fromRGB(100, 200, 100) or Config.MainColor})
 		tween(indicator, {Position = toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)})
 		
 		callback(toggled)
@@ -387,13 +472,13 @@ function Library:CreateToggle(name, default, callback)
 end
 
 -- Create Slider
-function Library:CreateSlider(name, min, max, default, callback)
+function ZayHub:CreateSlider(name, min, max, default, callback)
 	local value = default or min
 	
 	local sliderFrame = create("Frame", {
 		Name = name,
 		Size = UDim2.new(1, 0, 0, 50),
-		BackgroundColor3 = Config.SecondaryColor,
+		BackgroundColor3 = Config.AccentColor,
 		BorderSizePixel = 0,
 		Parent = self.content
 	})
@@ -403,19 +488,13 @@ function Library:CreateSlider(name, min, max, default, callback)
 		Parent = sliderFrame
 	})
 	
-	create("UIStroke", {
-		Color = Config.BorderColor,
-		Thickness = 1,
-		Parent = sliderFrame
-	})
-	
 	local label = create("TextLabel", {
 		Size = UDim2.new(1, -20, 0, 20),
 		Position = UDim2.new(0, 10, 0, 5),
 		BackgroundTransparency = 1,
 		Text = name..": "..value,
 		TextColor3 = Config.TextColor,
-		TextSize = 14,
+		TextSize = 13,
 		Font = Config.Font,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = sliderFrame
@@ -424,7 +503,7 @@ function Library:CreateSlider(name, min, max, default, callback)
 	local sliderBar = create("Frame", {
 		Size = UDim2.new(1, -20, 0, 6),
 		Position = UDim2.new(0, 10, 1, -15),
-		BackgroundColor3 = Config.BorderColor,
+		BackgroundColor3 = Config.MainColor,
 		BorderSizePixel = 0,
 		Parent = sliderFrame
 	})
@@ -436,7 +515,7 @@ function Library:CreateSlider(name, min, max, default, callback)
 	
 	local sliderFill = create("Frame", {
 		Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
-		BackgroundColor3 = Config.AccentColor,
+		BackgroundColor3 = Config.TextColor,
 		BorderSizePixel = 0,
 		Parent = sliderBar
 	})
@@ -476,200 +555,14 @@ function Library:CreateSlider(name, min, max, default, callback)
 	return sliderFrame
 end
 
--- Create Textbox
-function Library:CreateTextbox(name, placeholder, callback)
-	local textboxFrame = create("Frame", {
-		Name = name,
-		Size = UDim2.new(1, 0, 0, 50),
-		BackgroundColor3 = Config.SecondaryColor,
-		BorderSizePixel = 0,
-		Parent = self.content
-	})
-	
-	create("UICorner", {
-		CornerRadius = UDim.new(0, 6),
-		Parent = textboxFrame
-	})
-	
-	create("UIStroke", {
-		Color = Config.BorderColor,
-		Thickness = 1,
-		Parent = textboxFrame
-	})
-	
-	local label = create("TextLabel", {
-		Size = UDim2.new(1, -20, 0, 20),
-		Position = UDim2.new(0, 10, 0, 5),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = Config.TextColor,
-		TextSize = 14,
-		Font = Config.Font,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = textboxFrame
-	})
-	
-	local textbox = create("TextBox", {
-		Size = UDim2.new(1, -20, 0, 20),
-		Position = UDim2.new(0, 10, 1, -25),
-		BackgroundColor3 = Config.MainColor,
-		BorderSizePixel = 0,
-		Text = "",
-		PlaceholderText = placeholder,
-		TextColor3 = Config.TextColor,
-		PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
-		TextSize = 13,
-		Font = Config.Font,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = textboxFrame
-	})
-	
-	create("UICorner", {
-		CornerRadius = UDim.new(0, 4),
-		Parent = textbox
-	})
-	
-	create("UIPadding", {
-		PaddingLeft = UDim.new(0, 8),
-		Parent = textbox
-	})
-	
-	textbox.FocusLost:Connect(function(enter)
-		if enter then
-			callback(textbox.Text)
-		end
-	end)
-	
-	return textboxFrame
-end
-
--- Create Dropdown
-function Library:CreateDropdown(name, options, callback)
-	local selected = options[1] or "None"
-	local open = false
-	
-	local dropdownFrame = create("Frame", {
-		Name = name,
-		Size = UDim2.new(1, 0, 0, 35),
-		BackgroundColor3 = Config.SecondaryColor,
-		BorderSizePixel = 0,
-		Parent = self.content
-	})
-	
-	create("UICorner", {
-		CornerRadius = UDim.new(0, 6),
-		Parent = dropdownFrame
-	})
-	
-	create("UIStroke", {
-		Color = Config.BorderColor,
-		Thickness = 1,
-		Parent = dropdownFrame
-	})
-	
-	local label = create("TextLabel", {
-		Size = UDim2.new(0.5, -10, 1, 0),
-		Position = UDim2.new(0, 10, 0, 0),
-		BackgroundTransparency = 1,
-		Text = name,
-		TextColor3 = Config.TextColor,
-		TextSize = 14,
-		Font = Config.Font,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = dropdownFrame
-	})
-	
-	local dropdownBtn = create("TextButton", {
-		Size = UDim2.new(0.5, -20, 0, 25),
-		Position = UDim2.new(0.5, 10, 0, 5),
-		BackgroundColor3 = Config.MainColor,
-		BorderSizePixel = 0,
-		Text = selected.." ▼",
-		TextColor3 = Config.TextColor,
-		TextSize = 13,
-		Font = Config.Font,
-		Parent = dropdownFrame
-	})
-	
-	create("UICorner", {
-		CornerRadius = UDim.new(0, 4),
-		Parent = dropdownBtn
-	})
-	
-	local optionsFrame = create("Frame", {
-		Name = "Options",
-		Size = UDim2.new(0.5, -20, 0, #options * 30),
-		Position = UDim2.new(0.5, 10, 0, 35),
-		BackgroundColor3 = Config.MainColor,
-		BorderSizePixel = 0,
-		Visible = false,
-		ZIndex = 10,
-		Parent = dropdownFrame
-	})
-	
-	create("UICorner", {
-		CornerRadius = UDim.new(0, 4),
-		Parent = optionsFrame
-	})
-	
-	create("UIListLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = optionsFrame
-	})
-	
-	for _, option in ipairs(options) do
-		local optionBtn = create("TextButton", {
-			Size = UDim2.new(1, 0, 0, 30),
-			BackgroundColor3 = Config.MainColor,
-			BorderSizePixel = 0,
-			Text = option,
-			TextColor3 = Config.TextColor,
-			TextSize = 13,
-			Font = Config.Font,
-			ZIndex = 11,
-			Parent = optionsFrame
-		})
-		
-		optionBtn.MouseEnter:Connect(function()
-			tween(optionBtn, {BackgroundColor3 = Config.AccentColor})
-		end)
-		
-		optionBtn.MouseLeave:Connect(function()
-			tween(optionBtn, {BackgroundColor3 = Config.MainColor})
-		end)
-		
-		optionBtn.MouseButton1Click:Connect(function()
-			selected = option
-			dropdownBtn.Text = selected.." ▼"
-			optionsFrame.Visible = false
-			open = false
-			tween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 35)})
-			callback(selected)
-		end)
-	end
-	
-	dropdownBtn.MouseButton1Click:Connect(function()
-		open = not open
-		optionsFrame.Visible = open
-		
-		if open then
-			tween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 35 + #options * 30 + 5)})
-		else
-			tween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 35)})
-		end
-	end)
-	
-	return dropdownFrame
-end
-
 -- Create Label
-function Library:CreateLabel(text)
+function ZayHub:CreateLabel(text)
 	local label = create("TextLabel", {
 		Size = UDim2.new(1, 0, 0, 25),
 		BackgroundTransparency = 1,
 		Text = text,
 		TextColor3 = Config.TextColor,
-		TextSize = 14,
+		TextSize = 13,
 		Font = Config.Font,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = self.content
@@ -683,4 +576,4 @@ function Library:CreateLabel(text)
 	return label
 end
 
-return Library
+return ZayHub
