@@ -254,6 +254,39 @@ function Library:Init(config)
 			Content.Visible = true
 		end
 
+		-- Elements
+		function Tab:AddLabel(text)
+			local Label = Create("TextLabel", {
+				Text = text,
+				Size = UDim2.new(1, 0, 0, 24),
+				BackgroundTransparency = 1,
+				TextColor3 = Theme.TextDark,
+				TextSize = 13,
+				Font = Enum.Font.GothamSemibold,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Parent = Content
+			})
+
+			Create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = Label })
+
+			-- Controller
+			local LabelObj = {}
+
+			function LabelObj:SetText(newText)
+				Label.Text = tostring(newText)
+			end
+
+			function LabelObj:GetText()
+				return Label.Text
+			end
+
+			function LabelObj:Destroy()
+				Label:Destroy()
+			end
+
+			return LabelObj
+		end
+
 		return Tab
 	end
 
