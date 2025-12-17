@@ -12,6 +12,26 @@ local Strength = game:GetService("ReplicatedStorage").Data[PlrName].Strength -- 
 -- Load ZayHub Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Criptism/ZayHub/refs/heads/main/library.lua"))()
 
+-- Notification System
+local lastNotification = 0
+local notificationCooldown = 2 -- seconds between notifications
+
+local function Notify(title, message, duration)
+	local currentTime = tick()
+	if currentTime - lastNotification < notificationCooldown then
+		return -- Don't spam notifications
+	end
+	lastNotification = currentTime
+	
+	-- Create notification
+	game.StarterGui:SetCore("SendNotification", {
+		Title = title,
+		Text = message,
+		Duration = duration or 3,
+		Icon = "rbxassetid://7733658504"
+	})
+end
+
 -- Initialize Window
 local Window = Library:Init({
 	Name = "Doggy Hub V3 | Private Farm"
@@ -131,14 +151,14 @@ FarmingTab:AddButton("Delete HUD", function()
 	pcall(function()
 		game:GetService("Players").LocalPlayer.PlayerGui.HUD:Destroy()
 	end)
-	print("🗑️ HUD Deleted")
+	Notify("HUD", "Deleted successfully", 2)
 end)
 
 FarmingTab:AddButton("Delete Rumble", function()
 	pcall(function()
 		game.ReplicatedFirst.TourneyQ:Destroy()
 	end)
-	print("🗑️ Rumble Deleted")
+	Notify("Rumble", "Deleted successfully", 2)
 end)
 
 FarmingTab:AddButton("Delete Clouds", function()
@@ -150,15 +170,28 @@ FarmingTab:AddButton("Delete Clouds", function()
 			end
 		end
 	end)
-	print("🗑️ Clouds Deleted")
+	Notify("Clouds", "Deleted successfully", 2)
 end)
 
 FarmingTab:AddButton("Delete All Workspace", function()
-	print("🗑️ Deleting workspace objects...")
+	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	local currentPos = humanoidRootPart.CFrame
+	local skyPos = currentPos + Vector3.new(0, 15000, 0)
+	
+	-- Create invisible platform FIRST
+	local platform = Instance.new("Part")
+	platform.Name = "DONTDELETEME"
+	platform.Size = Vector3.new(50, 2, 50)
+	platform.Position = skyPos.Position
+	platform.Anchored = true
+	platform.Transparency = 1 -- Invisible
+	platform.CanCollide = true
+	platform.Parent = game.Workspace
 	
 	local keepObjects = {
 		["Terrain"] = true,
 		["Camera"] = true,
+		["DONTDELETEME"] = true,
 		[character.Name] = true
 	}
 	
@@ -172,7 +205,7 @@ FarmingTab:AddButton("Delete All Workspace", function()
 	-- Delete everything except essentials
 	local deletedCount = 0
 	for _, obj in pairs(game.Workspace:GetChildren()) do
-		if not keepObjects[obj.Name] and obj ~= character then
+		if not keepObjects[obj.Name] and obj ~= character and obj ~= platform then
 			pcall(function()
 				obj:Destroy()
 				deletedCount = deletedCount + 1
@@ -180,18 +213,21 @@ FarmingTab:AddButton("Delete All Workspace", function()
 		end
 	end
 	
-	print("✅ Deleted " .. deletedCount .. " objects")
-	print("✅ Kept: Terrain, Camera, and all Players")
+	-- Teleport player to platform
+	wait(0.2)
+	humanoidRootPart.CFrame = CFrame.new(platform.Position + Vector3.new(0, 5, 0))
+	
+	Notify("Workspace Cleared", "Deleted " .. deletedCount .. " objects & teleported to sky", 4)
 end)
 
 FarmingTab:AddButton("Teleport to Safe Zone", function()
 	game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-1938, 146, -5296)
-	print("🚀 Teleported to Safe Zone")
+	Notify("Teleport", "Teleported to safe zone", 2)
 end)
 
 FarmingTab:AddButton("Hide Inventory", function()
 	loadstring(game:HttpGet("https://pastebin.com/raw/8W1draqT", true))()
-	print("👻 Inventory Hidden")
+	Notify("Inventory", "Hidden successfully", 2)
 end)
 
 FarmingTab:AddButton("Low Ping (FPS Boost)", function()
@@ -226,7 +262,7 @@ FarmingTab:AddButton("Low Ping (FPS Boost)", function()
 			e.Enabled = false
 		end
 	end
-	print("⚡ FPS Boost Applied")
+	Notify("FPS Boost", "Applied successfully", 2)
 end)
 
 FarmingTab:AddButton("Anti AFK", function()
@@ -236,7 +272,7 @@ FarmingTab:AddButton("Anti AFK", function()
 		wait(1)
 		vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
 	end)
-	print("🕐 Anti AFK Enabled")
+	Notify("Anti AFK", "Enabled successfully", 2)
 end)
 
 -- Duping Tab
