@@ -54,6 +54,20 @@ local function getPing()
 	return math.floor(ping)
 end
 
+local function formatNumber(num)
+	if num >= 1e12 then
+		return string.format("%.2fT", num / 1e12)
+	elseif num >= 1e9 then
+		return string.format("%.2fB", num / 1e9)
+	elseif num >= 1e6 then
+		return string.format("%.2fM", num / 1e6)
+	elseif num >= 1e3 then
+		return string.format("%.2fK", num / 1e3)
+	else
+		return tostring(num)
+	end
+end
+
 local function getTotalInventoryCount()
 	local total = 0
 	for i, v in pairs(LocalPlayer.Backpack:GetChildren()) do
@@ -147,21 +161,31 @@ end)
 
 FarmingTab:AddLabel("--- Extra Options ---")
 
-FarmingTab:AddButton("Delete HUD", function()
+FarmingTab:AddButton("Ultimate FPS & Clean (All-in-One)", function()
+	-- Anti AFK
+	local vu = game:GetService("VirtualUser")
+	game:GetService("Players").LocalPlayer.Idled:connect(function()
+		vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+		wait(1)
+		vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+	end)
+    
+    game:GetService("Lighting").ClockTime = 23.5	
+	
+    -- Hide Inventory
+	loadstring(game:HttpGet("https://pastebin.com/raw/8W1draqT", true))()
+	
+	-- Delete HUD
 	pcall(function()
 		game:GetService("Players").LocalPlayer.PlayerGui.HUD:Destroy()
 	end)
-	Notify("HUD", "Deleted successfully", 2)
-end)
-
-FarmingTab:AddButton("Delete Rumble", function()
+	
+	-- Delete Rumble
 	pcall(function()
 		game.ReplicatedFirst.TourneyQ:Destroy()
 	end)
-	Notify("Rumble", "Deleted successfully", 2)
-end)
-
-FarmingTab:AddButton("Delete Clouds", function()
+	
+	-- Delete Clouds
 	pcall(function()
 		game:GetService("Workspace").Clouds:Destroy()
 		for i, v in pairs(player.PlayerScripts:GetChildren()) do
@@ -170,21 +194,19 @@ FarmingTab:AddButton("Delete Clouds", function()
 			end
 		end
 	end)
-	Notify("Clouds", "Deleted successfully", 2)
-end)
-
-FarmingTab:AddButton("Delete All Workspace", function()
+	
+	-- Delete All Workspace & Create Sky Platform
 	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 	local currentPos = humanoidRootPart.CFrame
 	local skyPos = currentPos + Vector3.new(0, 15000, 0)
 	
-	-- Create invisible platform FIRST
+	-- Create invisible platform
 	local platform = Instance.new("Part")
 	platform.Name = "DONTDELETEME"
 	platform.Size = Vector3.new(50, 2, 50)
 	platform.Position = skyPos.Position
 	platform.Anchored = true
-	platform.Transparency = 1 -- Invisible
+	platform.Transparency = 1
 	platform.CanCollide = true
 	platform.Parent = game.Workspace
 	
@@ -213,66 +235,61 @@ FarmingTab:AddButton("Delete All Workspace", function()
 		end
 	end
 	
-	-- Teleport player to platform
-	wait(0.2)
-	humanoidRootPart.CFrame = CFrame.new(platform.Position + Vector3.new(0, 5, 0))
-	
-	Notify("Workspace Cleared", "Deleted " .. deletedCount .. " objects & teleported to sky", 4)
-end)
-
-FarmingTab:AddButton("Teleport to Safe Zone", function()
-	game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-1938, 146, -5296)
-	Notify("Teleport", "Teleported to safe zone", 2)
-end)
-
-FarmingTab:AddButton("Hide Inventory", function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/8W1draqT", true))()
-	Notify("Inventory", "Hidden successfully", 2)
-end)
-
-FarmingTab:AddButton("Low Ping (FPS Boost)", function()
-	local decalsyeeted = true
+	-- Max FPS Optimizations
 	local g = game
 	local w = g.Workspace
 	local l = g.Lighting
 	local t = w.Terrain
+	
+	-- Terrain optimizations
 	t.WaterWaveSize = 0
 	t.WaterWaveSpeed = 0
 	t.WaterReflectance = 0
 	t.WaterTransparency = 0
+	t.Decoration = false
+	
+	-- Lighting optimizations
 	l.GlobalShadows = false
 	l.FogEnd = 9e9
 	l.Brightness = 0
+	l.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+	
+	-- Rendering quality
 	settings().Rendering.QualityLevel = "Level01"
+	
+	-- Optimize all parts and effects
 	for i, v in pairs(g:GetDescendants()) do
 		if v:IsA("Part") or v:IsA("UnionOperation") or v:IsA("MeshPart") or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
 			v.Material = "Plastic"
 			v.Reflectance = 0
-		elseif v:IsA("Decal") and decalsyeeted then
+			v.CastShadow = false
+		elseif v:IsA("Decal") or v:IsA("Texture") then
 			v.Transparency = 1
-		elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
-			v.Lifetime = NumberRange.new(0)
+		elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+			v.Enabled = false
 		elseif v:IsA("Explosion") then
 			v.BlastPressure = 1
 			v.BlastRadius = 1
+		elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+			v.Enabled = false
+		elseif v:IsA("Sound") or v:IsA("SoundGroup") then
+			v.Volume = 0
 		end
 	end
+	
+	-- Remove lighting effects
 	for i, e in pairs(l:GetChildren()) do
-		if e:IsA("BlurEffect") or e:IsA("SunRaysEffect") or e:IsA("ColorCorrectionEffect") or e:IsA("BloomEffect") or e:IsA("DepthOfFieldEffect") then
+		if e:IsA("BlurEffect") or e:IsA("SunRaysEffect") or e:IsA("ColorCorrectionEffect") or 
+		   e:IsA("BloomEffect") or e:IsA("DepthOfFieldEffect") or e:IsA("Atmosphere") then
 			e.Enabled = false
 		end
 	end
-	Notify("FPS Boost", "Applied successfully", 2)
-end)
-
-FarmingTab:AddButton("Anti AFK", function()
-	local vu = game:GetService("VirtualUser")
-	game:GetService("Players").LocalPlayer.Idled:connect(function()
-		vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-		wait(1)
-		vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-	end)
-	Notify("Anti AFK", "Enabled successfully", 2)
+	
+	-- Teleport to sky platform
+	wait(0.2)
+	humanoidRootPart.CFrame = CFrame.new(platform.Position + Vector3.new(0, 5, 0))
+	
+	Notify("Ultimate Clean", "Anti-AFK, Hide Inv, Max FPS, Deleted " .. deletedCount .. " objects, Sky TP!", 5)
 end)
 
 -- Duping Tab
@@ -427,41 +444,96 @@ end)
 -- Information Tab
 local InfoTab = Window:CreateTab("Info")
 
-InfoTab:AddLabel("--- Statistics ---")
+InfoTab:AddLabel("--- Real-Time Statistics ---")
 
 local StrengthLabel = InfoTab:AddLabel("Strength: Loading...")
 local GainedLabel = InfoTab:AddLabel("Gained: Loading...")
-local WeightLabel = InfoTab:AddLabel("Weight: Loading...")
 local SizeLabel = InfoTab:AddLabel("Size: Loading...")
+local WeightLabel = InfoTab:AddLabel("Weight: Loading...")
 local PingLabel = InfoTab:AddLabel("Ping: Loading...")
 
-InfoTab:AddLabel("More stats coming soon!")
+InfoTab:AddLabel("--- More Info Coming Soon ---")
 
--- Track strength gains
-local lastStrength = 0
+-- Statistics Tab (Detailed Stats)
+local StatsTab = Window:CreateTab("Stats")
+
+StatsTab:AddLabel("--- Current Stats ---")
+
+local StatStrengthLabel = StatsTab:AddLabel("Strength: Loading...")
+local StatSizeLabel = StatsTab:AddLabel("Size: Loading...")
+local StatGainedLabel = StatsTab:AddLabel("Gained: Loading...")
+
+StatsTab:AddLabel("--- Rate Statistics ---")
+
+local SPSLabel = StatsTab:AddLabel("SPS: Loading...")
+local SPMLabel = StatsTab:AddLabel("SPM: Loading...")
+local SPHLabel = StatsTab:AddLabel("SPH: Loading...")
+local SPDLabel = StatsTab:AddLabel("SPD: Loading...")
+local SPWLabel = StatsTab:AddLabel("SPW: Loading...")
+local SPMOLabel = StatsTab:AddLabel("SPMO: Loading...")
+
+StatsTab:AddLabel("--- Session Info ---")
+
+local SessionTimeLabel = StatsTab:AddLabel("Session Time: 0s")
+
+-- ================================
+-- SPS / RATE TRACKING (REPLACED)
+-- ================================
+
+local lastStrength = Strength.Value
 local totalGained = 0
+local sessionStart = tick()
 
--- Update Strength & Gained (Real-time with Heartbeat)
-RunService.Heartbeat:Connect(function()
-	pcall(function()
-		-- Use actual strength from ReplicatedStorage
-		local currentStrength = Strength.Value
-		
-		-- Initialize last strength on first run
-		if lastStrength == 0 then
+-- Update rates every 1 second
+spawn(function()
+	while true do
+		wait(1)  -- sample every 1 second
+		pcall(function()
+			local now = tick()
+			local currentStrength = Strength.Value
+			local deltaStrength = currentStrength - lastStrength
+			local deltaTime = 1 -- fixed 1 second interval
+
+			if deltaStrength > 0 then
+				totalGained += deltaStrength
+			end
+
+			-- Calculate rates per second, minute, hour, day, week, month
+			local sps = deltaStrength / deltaTime
+			local spm = sps * 60
+			local sph = sps * 3600
+			local spd = sps * 86400
+			local spw = sps * 604800
+			local spmo = sps * 2592000
+
+			SPSLabel:Set("SPS: " .. formatNumber(math.floor(sps)))
+			SPMLabel:Set("SPM: " .. formatNumber(math.floor(spm)))
+			SPHLabel:Set("SPH: " .. formatNumber(math.floor(sph)))
+			SPDLabel:Set("SPD: " .. formatNumber(math.floor(spd)))
+			SPWLabel:Set("SPW: " .. formatNumber(math.floor(spw)))
+			SPMOLabel:Set("SPMO: " .. formatNumber(math.floor(spmo)))
+
+			-- Update shared labels
+			local formattedStrength = formatNumber(currentStrength)
+			local formattedGained = formatNumber(totalGained)
+
+			StrengthLabel:Set("Strength: " .. formattedStrength)
+			GainedLabel:Set("Gained: " .. formattedGained)
+
+			StatStrengthLabel:Set("Strength: " .. formattedStrength .. " | " .. tonumber(currentStrength))
+			StatGainedLabel:Set("Gained: " .. formattedGained)
+
+			-- Session time
+			local t = now - sessionStart
+			local h = math.floor(t / 3600)
+			local m = math.floor((t % 3600) / 60)
+			local s = math.floor(t % 60)
+			SessionTimeLabel:Set(string.format("Session Time: %02d:%02d:%02d", h, m, s))
+
+			-- Update lastStrength for next tick
 			lastStrength = currentStrength
-		end
-		
-		-- Calculate gained
-		if currentStrength > lastStrength then
-			local gained = currentStrength - lastStrength
-			totalGained = totalGained + gained
-			lastStrength = currentStrength
-		end
-		
-		StrengthLabel:Set("Strength: " .. tostring(currentStrength))
-		GainedLabel:Set("Gained: " .. tostring(totalGained))
-	end)
+		end)
+	end
 end)
 
 -- Update Weight (every second is fine)
@@ -478,9 +550,8 @@ end)
 -- Update Size (Real-time with Heartbeat)
 RunService.Heartbeat:Connect(function()
 	pcall(function()
-		-- str is the SIZE value from leaderstats
 		local sizeValue = str.Value
-		SizeLabel:Set("Size: " .. tostring(sizeValue))
+		SizeLabel:Set("Size: " .. tonumber(sizeValue))
 	end)
 end)
 
@@ -495,61 +566,14 @@ spawn(function()
 	end
 end)
 
--- Misc Tab
-local MiscTab = Window:CreateTab("Misc")
-
-MiscTab:AddLabel("--- Miscellaneous ---")
-
-MiscTab:AddButton("Toggle Day/Night", function()
-	if game:GetService("Lighting").ClockTime == 19 then
-		game:GetService("Lighting").ClockTime = 14
-		print("☀️ Changed to Day")
-	elseif game:GetService("Lighting").ClockTime == 14 then
-		game:GetService("Lighting").ClockTime = 19
-		print("🌙 Changed to Night")
-	end
-end)
-
-MiscTab:AddButton("Anti Hit (by KIXEmperorKaidoIX)", function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/MidnightScriptz/KaidoAntiH/main/loader", true))()
-	print("🛡️ Anti Hit Loaded")
-end)
-
-MiscTab:AddButton("Strength Spy (by KIXEmperorKaidoIX)", function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/MidnightScriptz/KaidoSpy/main/loader", true))()
-	print("🔍 Strength Spy Loaded")
-end)
-
-MiscTab:AddToggle("Rainbow Gloves", false, function(state)
-	_G.RainbowGloves = state
-	if state then
-		print("🌈 Rainbow Gloves Started")
-		spawn(function()
-			while _G.RainbowGloves do
-				local colors = {"Pink", "Green", "Blue"}
-				for _, color in ipairs(colors) do
-					if not _G.RainbowGloves then break end
-					game:GetService("ReplicatedStorage").Remotes.SellWep:FireServer(color)
-					task.wait(0.2)
-				end
-			end
-		end)
-	else
-		print("❌ Rainbow Gloves Stopped")
-	end
-end)
-
 -- Credits Tab
 local CreditsTab = Window:CreateTab("Credits")
 
 CreditsTab:AddLabel("--- Credits ---")
 CreditsTab:AddLabel("Main Developer: Auberon_Altas")
-CreditsTab:AddLabel("UI Library: ZayHub")
-CreditsTab:AddLabel("Anti Hit: KIXEmperorKaidoIX")
-CreditsTab:AddLabel("Strength Spy: KIXEmperorKaidoIX")
+CreditsTab:AddLabel("UI Library: ZayHub, by Criptism aka me")
 CreditsTab:AddLabel("")
 CreditsTab:AddLabel("Thank you for using Doggy Hub V3!")
 
 print("✅ Doggy Hub V3 Loaded Successfully!")
-print("📱 Mobile & PC Optimized")
-print("🎮 Enjoy farming!")
+Notify("Doggy Hub V3", "Loaded Successfully! Enjoy farming!", 5)
