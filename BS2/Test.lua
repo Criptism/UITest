@@ -220,7 +220,7 @@ FarmingTab:AddButton("Ultimate FPS & Clean (All-in-One)", function()
     local hud = player.PlayerGui:FindFirstChild("HUD")
     if hud then hud:Destroy() end
 
-ocal Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
