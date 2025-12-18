@@ -1,4 +1,4 @@
---updated Ultimate FPS
+--Size
 
 local player = game:GetService("Players").LocalPlayer
 local Players = game:GetService("Players")
@@ -513,8 +513,7 @@ end)
 -- Update Size (Real-time with Heartbeat)
 RunService.Heartbeat:Connect(function()
 	pcall(function()
-		local sizeValue = str.Value
-		SizeLabel:Set("Size: " .. tonumber(sizeValue))
+		SizeLabel:Set("Size: " .. str.Value)
 	end)
 end)
 
